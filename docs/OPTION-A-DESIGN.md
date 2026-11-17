@@ -193,6 +193,34 @@ through the GSLB until they enforce it), for routes, rate limits and `request-te
   keep serving their last config meanwhile. Rule: `pg_dump` + `deck gateway dump` before every upgrade.
 - Compared with option C: C is DB-less — upgrade = new image tag in Git, rollback = `git revert`.
 
+## Verified on the running cluster (2026-11-17, free mode)
+
+Both data planes connected (`/clustering/data-planes`: `sync_status normal`). Through each leg's proxy:
+
+| Request | leg1 | leg2 |
+|---|---|---|
+| `GET /orders/1`, `POST /orders` (route orders-create), `GET /users/me` | 200 (echo answers from its own leg) | 200 |
+| `GET /reports/1` (request-termination) | 403 `blocked: everyone on this route` | 403 |
+| unknown path | 404 | 404 |
+| orders, 5/min per leg | 5 × 200, then 429 | still 200 while leg1 is at 429 |
+
+The counters are in each leg's own Redis (DB 4): the data planes resolved `{vault://env/kong-route-rl-redis-host}`
+and `{vault://env/kong-route-rl-redis-password}` to their leg's values — the per-leg route limit works with one
+plugin configuration.
+
+Propagation (Admin API call returned → **both** legs enforce, 5 samples each, polling every 20 ms):
+
+| Change | Median | Range |
+|---|---|---|
+| route created → 200 | 4.0 s | 0.3–4.7 s |
+| request-termination added → 403 | 5.0 s | 5.0–5.3 s |
+| rate limit edited (100000 → 1/min) → 429 | 3.0 s | 3.0–3.6 s |
+| route deleted → 404 | 4.9 s | 4.9–5.2 s |
+
+The steady ~5 s ceiling matches the control plane's default `db_update_frequency` (5 s); lowering it is a
+tuning option to test. Gotcha seen while measuring: a route created through the Admin API **without**
+`protocols` answered `426 Please use HTTPS protocol` on plain HTTP — always set `protocols` (Kong Manager's form does).
+
 ## Build plan (after approval) — stops marked ⏸ need your OK
 
 | Step | What | Cluster-wide / needs admin |
@@ -203,8 +231,8 @@ through the GSLB until they enforce it), for routes, rate limits and `request-te
 | ✔ B3 | Routes for Kong Manager and Admin API (`values/cp-openshift.yaml`, edge TLS, CORS origin = Kong Manager); open Kong Manager from Windows (`windows/hosts-konga.cmd`) | no |
 | ✔ B4 | Data planes + per-leg Redis + backends in `konga-leg1/2` (`scripts/deploy.sh leg1|leg2`); both DPs connected (`/clustering/data-planes`: `sync_status normal`) | no |
 | B5 | GSLB simulator for the A legs in `konga-gslb` + Route | no |
-| B6 | In Kong Manager (and scripted through the Admin API for repeatability): services/routes for orders/reports/users, `jwt` with the Keycloak `corp` realm key, `rate-limiting` per route (redis, per-leg host), `request-termination` on a route. Verify each on the cluster | no |
-| B7 | Measure propagation (Kong Manager/Admin API change → both legs enforce) | no |
+| ✔ B6 (demo) | `scripts/demo-config.sh` (Admin API, tag `option-a-demo`): services orders/users/reports (short host names, timeouts, retries 1), routes orders, orders-create (POST), users (GET), reports; rate-limiting per leg on orders (5/min) and users (20/min); request-termination 403 on reports. Verified on both legs. Original plan: services/routes for orders/reports/users, `jwt` with the Keycloak `corp` realm key, `rate-limiting` per route (redis, per-leg host), `request-termination` on a route. Verify each on the cluster | no |
+| ✔ B7 | Measure propagation (Kong Manager/Admin API change → both legs enforce) | no |
 | B8 | Acceptance tests that apply to free mode (routing, round robin, JWT signature/expiry, route limit per leg, everyone-on-route block, drain, new DP pod) → `docs/TEST-REPORT-A.md` with the A-vs-C table | no |
 
 Windows hosts entries (B3: `windows/hosts-konga.cmd <VM IP>` adds the first two; B5 adds the GSLB name):

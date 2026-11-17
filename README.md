@@ -12,6 +12,7 @@ installs the infrastructure, with plain Helm (no Argo CD):
 | `docs/OPTION-A-DESIGN.md` | design, findings, free mode vs licensed, build plan |
 | `scripts/bootstrap.sh` | once: namespaces `konga-*`, Secrets (Postgres password, hybrid cluster certificate) |
 | `scripts/deploy.sh <cp\|leg1\|leg2>` | `helm upgrade --install` of the control plane (+ Postgres) or a data plane |
+| `scripts/demo-config.sh [delete]` | example configuration through the Admin API (tag `option-a-demo`) - Kong Manager is read-only in free mode |
 | `charts/postgres` | Postgres for the control plane |
 | `values/` | values for the official `kong/kong` chart (pinned in `scripts/lib.sh`) |
 | `windows/hosts-konga.cmd` | adds the Kong Manager / Admin API host names to the Windows hosts file (asks for the VM IP) |
