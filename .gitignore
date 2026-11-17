@@ -1,0 +1,6 @@
+*.tgz
+charts/*/charts/
+.env
+*.pem
+*.key
+license*.json
