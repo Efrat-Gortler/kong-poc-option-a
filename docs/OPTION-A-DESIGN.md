@@ -1,6 +1,9 @@
 # Option A — Kong Manager, self-hosted (design)
 
-Status: **B0–B2 built** (namespaces, Secrets, Postgres, control plane) and free mode verified on 3.14 (2026-11-17). Built next to option C in the same cluster; option C
+Status (2026-11-17): **B0–B2 built** with plain Helm from this repository (namespaces, Secrets, Postgres, control
+plane); free mode verified on 3.14; a second `scripts/deploy.sh cp` (helm upgrade) ran `kong migrations up` /
+`finish` as hooks ("already up-to-date" / "no pending migrations"). First built through Argo CD in kong-poc,
+then moved here; kong-poc main is option C only again. Built next to option C in the same cluster; option C
 (`leg1`, `leg2`, `kong-global`, blocking service, OPA and their Argo CD apps) is not touched.
 
 **Repositories:** option A lives in this repository (`kong-poc-option-a`) and is installed with plain
