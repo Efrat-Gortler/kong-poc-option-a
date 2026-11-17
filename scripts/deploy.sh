@@ -29,8 +29,12 @@ case "$target" in
     log "helm upgrade --install konga-postgres charts/postgres -n $CP_NS"
     helm upgrade --install konga-postgres "$REPO_ROOT/charts/postgres" -n "$CP_NS" \
       --set global.platform="$PLATFORM" --wait --timeout 5m
-    kong_release konga-cp "$CP_NS" "$VALUES/cp.yaml"
-    log "control plane ready: oc port-forward -n $CP_NS svc/konga-cp-kong-admin 8001  (Admin API)"
+    kong_release konga-cp "$CP_NS" "$VALUES/cp.yaml" "$VALUES/cp-$PLATFORM.yaml"
+    if [[ "$PLATFORM" == openshift ]]; then
+      for r in kong-manager kong-admin; do
+        log "$r: https://$(oc get route "$r" -n "$CP_NS" -o jsonpath='{.spec.host}')   (free mode: NO login)"
+      done
+    fi
     ;;
   leg1|leg2)
     die "data planes are step B4 - not built yet"

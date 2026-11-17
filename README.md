@@ -14,6 +14,7 @@ installs the infrastructure, with plain Helm (no Argo CD):
 | `scripts/deploy.sh <cp\|leg1\|leg2>` | `helm upgrade --install` of the control plane (+ Postgres) or a data plane |
 | `charts/postgres` | Postgres for the control plane |
 | `values/` | values for the official `kong/kong` chart (pinned in `scripts/lib.sh`) |
+| `windows/hosts-konga.cmd` | adds the Kong Manager / Admin API host names to the Windows hosts file (asks for the VM IP) |
 
 Shared with option C and used as they are (in `kong-poc`): Redis (`gw-shared`), Keycloak (`idp`), the acceptance
 tests, the `redis` / `mock-service` / `gslb-sim` charts.

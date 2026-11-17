@@ -1,0 +1,32 @@
+# Control plane on OpenShift: Routes for Kong Manager and the Admin API (edge TLS on the router).
+# Kong Manager is a browser application that calls the Admin API directly, so both need a Route,
+# and the control plane must know both addresses (admin_gui_url is also the CORS origin of the Admin API).
+#
+# FREE MODE: neither has a login - whoever reaches these hosts is an administrator. POC only; reachable
+# only from the IP range the GCP firewall allows. Licensed: enforce_rbac + admin_gui_auth (docs/OPTION-A-DESIGN.md).
+# Another cluster: replace apps-crc.testing with its apps domain (three places below).
+env:
+  admin_gui_url: https://kong-manager-konga-cp.apps-crc.testing
+  admin_gui_api_url: https://kong-admin-konga-cp.apps-crc.testing
+
+extraObjects:
+  - apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      name: kong-manager
+      labels: { app.kubernetes.io/part-of: kong-poc-a }
+    spec:
+      host: kong-manager-konga-cp.apps-crc.testing
+      to: { kind: Service, name: '{{ .Release.Name }}-kong-manager' }
+      port: { targetPort: kong-manager }
+      tls: { termination: edge, insecureEdgeTerminationPolicy: Redirect }
+  - apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      name: kong-admin
+      labels: { app.kubernetes.io/part-of: kong-poc-a }
+    spec:
+      host: kong-admin-konga-cp.apps-crc.testing
+      to: { kind: Service, name: '{{ .Release.Name }}-kong-admin' }
+      port: { targetPort: kong-admin }
+      tls: { termination: edge, insecureEdgeTerminationPolicy: Redirect }
