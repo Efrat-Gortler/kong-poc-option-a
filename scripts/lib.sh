@@ -11,6 +11,8 @@ CP_NS=konga-cp
 DP_NAMESPACES=(konga-leg1 konga-leg2)
 GSLB_NS=konga-gslb
 PLATFORM="${PLATFORM:-openshift}"          # openshift | kubernetes
+# Option C repository: the reusable charts (redis, mock-service + kong-route-lib) are used from there, unchanged
+KONG_POC_DIR="${KONG_POC_DIR:-$HOME/kong-poc}"
 
 if ! command -v oc >/dev/null 2>&1; then oc() { kubectl "$@"; }; fi
 

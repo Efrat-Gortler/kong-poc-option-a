@@ -201,7 +201,7 @@ through the GSLB until they enforce it), for routes, rate limits and `request-te
 | ✔ B1 | Secrets (`scripts/bootstrap.sh`): Postgres password, cluster cert | no |
 | ✔ B2 | Postgres + control plane: `scripts/deploy.sh cp` (Kong Enterprise also needs `cluster_telemetry_listen` on a CP). **Verify free mode on 3.14**: `POST /services` on the Admin API succeeds. If read-only → stop and report (fallback 3.10 LTS) | no |
 | ✔ B3 | Routes for Kong Manager and Admin API (`values/cp-openshift.yaml`, edge TLS, CORS origin = Kong Manager); open Kong Manager from Windows (`windows/hosts-konga.cmd`) | no |
-| B4 | Data planes + per-leg Redis + backends in `konga-leg1/2`; check both DPs connected (`/clustering/data-planes`) | no |
+| ✔ B4 | Data planes + per-leg Redis + backends in `konga-leg1/2` (`scripts/deploy.sh leg1|leg2`); both DPs connected (`/clustering/data-planes`: `sync_status normal`) | no |
 | B5 | GSLB simulator for the A legs in `konga-gslb` + Route | no |
 | B6 | In Kong Manager (and scripted through the Admin API for repeatability): services/routes for orders/reports/users, `jwt` with the Keycloak `corp` realm key, `rate-limiting` per route (redis, per-leg host), `request-termination` on a route. Verify each on the cluster | no |
 | B7 | Measure propagation (Kong Manager/Admin API change → both legs enforce) | no |

@@ -37,7 +37,27 @@ case "$target" in
     fi
     ;;
   leg1|leg2)
-    die "data planes are step B4 - not built yet"
+    ns="konga-$target"
+    oc get secret konga-route-redis -n "$ns" >/dev/null 2>&1 || die "run scripts/bootstrap.sh first"
+    [[ -d "$KONG_POC_DIR/charts/redis" ]] || die "KONG_POC_DIR=$KONG_POC_DIR: option C repository not found"
+    # the leg's own Redis (route-wide counters), chart reused from option C
+    log "helm upgrade --install redis kong-poc/charts/redis -n $ns"
+    helm upgrade --install redis "$KONG_POC_DIR/charts/redis" -n "$ns" \
+      --set global.platform="$PLATFORM" --set passwordSecret=konga-route-redis \
+      --set-string 'legNamespaceLabel.kong-poc/role=leg-a' --wait --timeout 5m
+    # echo backends (Services orders / users / reports), chart reused from option C; its file:// dependency is
+    # built in a temporary copy so nothing is written into the option C repository
+    tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+    cp -r "$KONG_POC_DIR/charts/mock-service" "$KONG_POC_DIR/charts/kong-route-lib" "$tmp/"
+    rm -rf "$tmp/mock-service/charts"
+    helm dependency build "$tmp/mock-service" >/dev/null
+    for c in orders users reports; do
+      log "helm upgrade --install $c kong-poc/charts/mock-service -n $ns"
+      helm upgrade --install "$c" "$tmp/mock-service" -n "$ns" --set component="$c" \
+        --set global.platform="$PLATFORM" --set global.leg="$target" --wait --timeout 5m
+    done
+    kong_release "konga-$target" "$ns" "$VALUES/dp.yaml" "$VALUES/$target.yaml"
+    log "data plane $target: oc port-forward -n $ns svc/konga-$target-kong-proxy 8000:80"
     ;;
   *) die "unknown target $target (cp | leg1 | leg2)" ;;
 esac

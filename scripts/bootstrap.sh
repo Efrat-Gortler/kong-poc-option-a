@@ -4,6 +4,7 @@
 #   2. Secrets, random values, never written to Git or disk:
 #        konga-cp/konga-postgres        username, password  (Kong's Postgres)
 #        <cp and dp namespaces>/kong-cluster-cert   tls.crt, tls.key  (hybrid mTLS, cluster_mtls: shared)
+#        <dp namespaces>/konga-route-redis           password  (each leg's Redis for the route-wide limit)
 # Everything else is installed with Helm: scripts/deploy.sh cp | leg1 | leg2.
 # Safe to re-run: existing namespaces and Secrets are kept. ASSUME_YES=1 skips the prompt.
 source "$(dirname "$0")/lib.sh"
@@ -53,4 +54,13 @@ for ns in "${DP_NS[@]}"; do
   fi
 done
 
-log "done. Next: scripts/deploy.sh cp"
+for ns in "${DP_NS[@]}"; do
+  if oc get secret konga-route-redis -n "$ns" >/dev/null 2>&1; then
+    log "keep   $ns/konga-route-redis"
+  else
+    oc create secret generic konga-route-redis -n "$ns" --from-literal=password="$(random_secret)" >/dev/null
+    log "create $ns/konga-route-redis"
+  fi
+done
+
+log "done. Next: scripts/deploy.sh cp, then scripts/deploy.sh leg1 / leg2"

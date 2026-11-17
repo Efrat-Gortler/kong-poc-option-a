@@ -1,0 +1,40 @@
+# Data plane: DB-less, receives its whole configuration from the control plane (konga-cp) over the
+# cluster connection (mTLS, shared certificate). No Admin API, no Kong Manager.
+env:
+  role: data_plane
+  database: "off"
+  cluster_control_plane: konga-cp-kong-cluster.konga-cp.svc.cluster.local:8005
+  cluster_telemetry_endpoint: konga-cp-kong-clustertelemetry.konga-cp.svc.cluster.local:8006
+  # Per-leg route limits: the rate-limiting plugins (one config for every leg, managed in Kong Manager) use
+  #   redis.host     = {vault://env/kong-route-rl-redis-host}
+  #   redis.password = {vault://env/kong-route-rl-redis-password}
+  # and each data plane resolves them to ITS leg's Redis (route_rl_* below, values/leg<N>.yaml).
+  route_rl_redis_password:
+    valueFrom: { secretKeyRef: { name: konga-route-redis, key: password } }
+
+admin:
+  enabled: false
+manager:
+  enabled: false
+cluster:
+  enabled: false
+clustertelemetry:
+  enabled: false
+
+proxy:
+  enabled: true
+  type: ClusterIP
+  http:
+    enabled: true
+    servicePort: 80
+    containerPort: 8000
+  tls:
+    enabled: false
+
+migrations:
+  preUpgrade: false
+  postUpgrade: false
+
+resources:
+  requests: { cpu: 200m, memory: 384Mi }
+  limits: { memory: 768Mi }
